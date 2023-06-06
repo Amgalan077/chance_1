@@ -21,8 +21,14 @@ def get_city_id(city_name):
     return data_id
 
 
-def get_hotels_in_city(city_id, num_hotels):
+def get_hotels_in_city(city_id, num_hotels,sort_ = 'low'):
     list_hotels = {}
+
+    if sort_ == 'low':
+        sort_key = 'PRICE_LOW_TO_HIGH'
+    else:
+        sort_key = 'RECOMMENDED'
+
 
     url = "https://hotels4.p.rapidapi.com/properties/v2/list"
 
@@ -50,7 +56,7 @@ def get_hotels_in_city(city_id, num_hotels):
         ],
         "resultsStartingIndex": 0,
         "resultsSize": 200,
-        "sort": "PRICE_HIGH_TO_LOW", #
+        "sort": f"{sort_key}", #
         "filters": {"price": {
             "max": 100,
             "min": 1
