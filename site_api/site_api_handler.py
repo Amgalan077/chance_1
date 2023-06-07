@@ -1,4 +1,3 @@
-
 import requests
 
 
@@ -21,14 +20,14 @@ def get_city_id(city_name):
     return data_id
 
 
-def get_hotels_in_city(city_id, num_hotels,sort_ = 'low', min_price: int = 1, max_price: int = 100):
+def get_hotels_in_city(city_id: str, num_hotels, min_price: int = 1, max_price=100, sort_='low',command = 0):
+    print(min_price, max_price)
     list_hotels = {}
 
     if sort_ == 'low':
         sort_key = 'PRICE_LOW_TO_HIGH'
     else:
         sort_key = 'RECOMMENDED'
-
 
     url = "https://hotels4.p.rapidapi.com/properties/v2/list"
 
@@ -56,7 +55,7 @@ def get_hotels_in_city(city_id, num_hotels,sort_ = 'low', min_price: int = 1, ma
         ],
         "resultsStartingIndex": 0,
         "resultsSize": 200,
-        "sort": f"{sort_key}", #
+        "sort": f"{sort_key}",
         "filters": {"price": {
             "max": max_price,
             "min": min_price
@@ -74,12 +73,11 @@ def get_hotels_in_city(city_id, num_hotels,sort_ = 'low', min_price: int = 1, ma
 
     properties = data['data']['propertySearch']['properties']
 
-
     try:
         for i in range(num_hotels):
-            list_hotels[f"Отель: {properties[i]['name']}. Цена: {properties[i]['price']['lead']['formatted']}"] = properties[i]['id']
+            list_hotels[f"Отель: {properties[i]['name']}. Цена: {properties[i]['price']['lead']['formatted']}"] = \
+            properties[i]['id']
     except IndexError:
-        # list_hotels += 'Все, что есть'
         return list_hotels
     return list_hotels
 
@@ -104,6 +102,7 @@ def print_hotels(hotel_id, num_photo):
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
     for i in range(num_photo):
-        list_photo[f"{data['data']['propertyInfo']['propertyGallery']['images'][i]['image']['description']}"] = data['data']['propertyInfo']['propertyGallery']['images'][i]['image']['url']
+        list_photo[f"{data['data']['propertyInfo']['propertyGallery']['images'][i]['image']['description']}"] = \
+        data['data']['propertyInfo']['propertyGallery']['images'][i]['image']['url']
 
     return list_photo

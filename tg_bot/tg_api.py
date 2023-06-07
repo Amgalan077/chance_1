@@ -9,7 +9,9 @@ args = None
 sort_ = None
 price_range = None  # для диапозона цен
 distance_range = None  # для диапозона расстояний
-amount_hotels = None  # для количество расстояний
+amount_hotels = None  # для количество отелей
+bestdeal_city = None
+commads = None  # для low,high = 0; для best = 1
 
 """
 /lowprice: Сортировка по убыванию
@@ -59,7 +61,8 @@ def start_1(message):
 
 @bot.message_handler(commands=['lowprice'])
 def get_hotels_lowprice(message):
-    global args, sort_
+    global args, sort_, commads
+    commads = 0
     bot.send_message(message.chat.id, 'Введите город и через пробел количество отелей.\nПример: "Рига 2"')
     bot.register_next_step_handler(message, answer_from_user)
     bot.register_next_step_handler(message, lambda message: process_callback_data(message, 'low'))
@@ -67,7 +70,8 @@ def get_hotels_lowprice(message):
 
 @bot.message_handler(commands=['highprice'])
 def get_hotels_highprice(message):
-    global args, sort_
+    global args, sort_, commads
+    commads = 0
     bot.send_message(message.chat.id, 'Введите город и через пробел количество отелей.\nПример: "Рига 2"')
     bot.register_next_step_handler(message, answer_from_user)
     bot.register_next_step_handler(message, lambda message: process_callback_data(message, 'high'))
@@ -75,7 +79,8 @@ def get_hotels_highprice(message):
 
 @bot.message_handler(commands=['bestdeal'])
 def get_hotels(message):
-    global args
+    global commads
+    commads = 1
     bot.send_message(message.chat.id, 'Введите город:')
     bot.register_next_step_handler(message, answer_price_range)
 
@@ -85,41 +90,45 @@ def answer_from_user(message):  # для /lowprice и /highprice
     args = message.text.split()  # Текст пользователя: Рига 2
 
 
-
-def answer_price_range(message): #для /bestdeal
+def answer_price_range(message):  # для /bestdeal
+    global bestdeal_city
+    bestdeal_city = message.text
     bot.send_message(message.chat.id, 'Введите диапозон цен, где первая цифра начало, вторая - конец\nПример: 1 40')
     bot.register_next_step_handler(message, get_price_range)
 
 
-def get_price_range(message):
+def get_price_range(message):  # диапозон цен (bestdeal)
     global price_range
     price_range = message.text.split()
-    print(price_range)
+    # print(price_range)
     bot.send_message(message.chat.id,
-                     'Введите диапозон расстояния, где первая цифра начало, вторая - конец\nПример: 20 100')
+                     'Введите диапозон расстояния (в метрах), где первая цифра начало, вторая - конец\nПример: 20 100')
     bot.register_next_step_handler(message, get_distance_range)
 
 
-def get_distance_range(message):
+def get_distance_range(message):  # диапозон расстояний (bestdeal)
     global distance_range
     distance_range = message.text.split()
-    print(distance_range)
+    # print(distance_range)
     bot.send_message(message.chat.id, 'Введите кол-во отелей')
     bot.register_next_step_handler(message, get_amount_hotels)
 
 
-def get_amount_hotels(message):
-    global amount_hotels
+def get_amount_hotels(message):  # количество отелей
+    global amount_hotels, price_range, args, bestdeal_city
     amount_hotels = message.text
-    print(amount_hotels)
+    args = [bestdeal_city, amount_hotels]
+    # print(args)
+    process_callback_data(message, price_range[0], price_range[1], 'low')
 
 
-def process_callback_data(message, sortirovka='low'):
-    global args, sort_
+def process_callback_data(message, min_price: int = 100, max_price: int = 150, sortirovka='low'):
+    global args, sort_, commads
     sort_ = sortirovka
     try:
         city, num_hotels = args[0], int(args[1])  # Разделение текста на аргументы
-        hotels_data = site_api_handler.get_hotels_in_city(city, num_hotels, sort_)
+        print(min_price, max_price)
+        hotels_data = site_api_handler.get_hotels_in_city(city, num_hotels, int(min_price), int(max_price), sort_, commads)
         hotels_data_text = '\n'.join([hotel for hotel in hotels_data])
 
         keyboard = create_hotel_buttons(hotels_data)  # создание кнопок с помощью функции
@@ -127,7 +136,6 @@ def process_callback_data(message, sortirovka='low'):
             bot.send_message(message.chat.id, f'{hotels_data_text}\nВсе, что есть', reply_markup=keyboard)
         else:
             bot.send_message(message.chat.id, f'{hotels_data_text}', reply_markup=keyboard)
-        # bot.register_next_step_handler(message, process_callback_data)
 
     except ValueError:
         bot.send_message(message.chat.id, 'Введите все заново! (Город число)')
@@ -148,8 +156,6 @@ def get_num_photo(message, data):
     markup.row(btn1)
     for info, url in res.items():
         bot.send_photo(message.chat.id, url, caption=info, reply_markup=markup)
-
-    # bot.register_next_step_handler(message, start)
 
 
 bot.infinity_polling()
