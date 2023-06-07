@@ -21,7 +21,7 @@ def get_city_id(city_name):
     return data_id
 
 
-def get_hotels_in_city(city_id, num_hotels,sort_ = 'low'):
+def get_hotels_in_city(city_id, num_hotels,sort_ = 'low', min_price: int = 1, max_price: int = 100):
     list_hotels = {}
 
     if sort_ == 'low':
@@ -58,8 +58,8 @@ def get_hotels_in_city(city_id, num_hotels,sort_ = 'low'):
         "resultsSize": 200,
         "sort": f"{sort_key}", #
         "filters": {"price": {
-            "max": 100,
-            "min": 1
+            "max": max_price,
+            "min": min_price
         }}
     }
     headers = {
