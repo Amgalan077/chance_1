@@ -11,7 +11,6 @@ price_range = None  # для диапозона цен
 distance_range = None  # для диапозона расстояний
 amount_hotels = None  # для количество отелей
 bestdeal_city = None
-commads = None  # для low,high = 0; для best = 1
 
 """
 /lowprice: Сортировка по убыванию
@@ -61,8 +60,7 @@ def start_1(message):
 
 @bot.message_handler(commands=['lowprice'])
 def get_hotels_lowprice(message):
-    global args, sort_, commads
-    commads = 0
+    global args, sort_
     bot.send_message(message.chat.id, 'Введите город и через пробел количество отелей.\nПример: "Рига 2"')
     bot.register_next_step_handler(message, answer_from_user)
     bot.register_next_step_handler(message, lambda message: process_callback_data(message, 'low'))
@@ -70,8 +68,7 @@ def get_hotels_lowprice(message):
 
 @bot.message_handler(commands=['highprice'])
 def get_hotels_highprice(message):
-    global args, sort_, commads
-    commads = 0
+    global args, sort_
     bot.send_message(message.chat.id, 'Введите город и через пробел количество отелей.\nПример: "Рига 2"')
     bot.register_next_step_handler(message, answer_from_user)
     bot.register_next_step_handler(message, lambda message: process_callback_data(message, 'high'))
@@ -79,8 +76,6 @@ def get_hotels_highprice(message):
 
 @bot.message_handler(commands=['bestdeal'])
 def get_hotels(message):
-    global commads
-    commads = 1
     bot.send_message(message.chat.id, 'Введите город:')
     bot.register_next_step_handler(message, answer_price_range)
 
@@ -115,20 +110,42 @@ def get_distance_range(message):  # диапозон расстояний (bestd
 
 
 def get_amount_hotels(message):  # количество отелей
-    global amount_hotels, price_range, args, bestdeal_city
+    global amount_hotels, price_range, distance_range, args, bestdeal_city
     amount_hotels = message.text
     args = [bestdeal_city, amount_hotels]
     # print(args)
-    process_callback_data(message, price_range[0], price_range[1], 'low')
+    process_callback_data_bestdeal(message, price_range[0], price_range[1], distance_range[0], distance_range[1])
 
 
-def process_callback_data(message, min_price: int = 100, max_price: int = 150, sortirovka='low'):
-    global args, sort_, commads
+def process_callback_data(message, sortirovka='low', min_price: int = 100, max_price: int = 150):  # для low/high
+    global args, sort_
     sort_ = sortirovka
+    print(args, sort_)
     try:
         city, num_hotels = args[0], int(args[1])  # Разделение текста на аргументы
         print(min_price, max_price)
-        hotels_data = site_api_handler.get_hotels_in_city(city, num_hotels, int(min_price), int(max_price), sort_, commads)
+        hotels_data = site_api_handler.get_hotels_in_city(city, num_hotels, int(min_price), int(max_price), sort_)
+        hotels_data_text = '\n'.join([hotel for hotel in hotels_data])
+
+        keyboard = create_hotel_buttons(hotels_data)  # создание кнопок с помощью функции
+        if len([hotel for hotel in hotels_data]) < num_hotels:  # для проверки количество отелей
+            bot.send_message(message.chat.id, f'{hotels_data_text}\nВсе, что есть', reply_markup=keyboard)
+        else:
+            bot.send_message(message.chat.id, f'{hotels_data_text}', reply_markup=keyboard)
+
+    except ValueError:
+        bot.send_message(message.chat.id, 'Введите все заново! (Город число)')
+        bot.register_next_step_handler(message, start)
+
+
+def process_callback_data_bestdeal(message, min_price: int = 100, max_price: int = 150, min_distance: int = 0,
+                                   max_distance: int = 1):  # для bestdeal
+    global args
+    try:
+        city, num_hotels = args[0], int(args[1])  # Разделение текста на аргументы
+        print(min_price, max_price, min_distance, max_distance)
+        hotels_data = site_api_handler.get_hotels_in_city_bestdeal(city, num_hotels, int(min_price), int(max_price),
+                                                                   int(min_distance) / 1000, int(max_distance) / 1000)
         hotels_data_text = '\n'.join([hotel for hotel in hotels_data])
 
         keyboard = create_hotel_buttons(hotels_data)  # создание кнопок с помощью функции
